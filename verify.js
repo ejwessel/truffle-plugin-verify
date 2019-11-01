@@ -170,7 +170,7 @@ const fetchMergedSource = async (artifact, options) => {
 }
 
 const verificationStatus = async (guid, options) => {
-  // Retry API call every second until status is no longer pending
+  // Exponential back off until status is no longer pending
   let delayTime = 4000
   while (true) {
     await delay(delayTime)
