@@ -1,7 +1,7 @@
+//truffle run verify <ContractName> <ContractName> <FlattenedSource.sol> --network rinkeby
 const axios = require('axios')
 const querystring = require('querystring')
 const delay = require('delay')
-const { merge } = require('sol-merger')
 const fs = require('fs')
 const { enforce, enforceOrThrow } = require('./util')
 const { API_URLS, EXPLORER_URLS, RequestStatus, VerificationStatus } = require('./constants')
@@ -10,7 +10,8 @@ module.exports = async (config) => {
   const options = parseConfig(config)
 
   // Verify each contract
-  const contractNameAddressPairs = config._.slice(1)
+  const contractNameAddressPairs = config._.slice(1, -1)
+  const artifactSource = config._.slice(-1).pop()
 
   // Track which contracts failed verification
   const failedContracts = []
@@ -25,7 +26,7 @@ module.exports = async (config) => {
         artifact.networks[`${options.networkId}`].address = contractAddress
       }
 
-      let status = await verifyContract(artifact, options)
+      let status = await verifyContract(artifact, artifactSource, options)
       if (status === VerificationStatus.FAILED) {
         failedContracts.push(`${contractNameAddressPair}`)
       } else {
@@ -86,13 +87,13 @@ const getArtifact = (contractName, options) => {
   return JSON.parse(JSON.stringify(require(artifactPath)))
 }
 
-const verifyContract = async (artifact, options) => {
+const verifyContract = async (artifact, artifactSource, options) => {
   enforceOrThrow(
     artifact.networks && artifact.networks[`${options.networkId}`],
     `No instance of contract ${artifact.contractName} found for network id ${options.networkId}`
   )
 
-  const res = await sendVerifyRequest(artifact, options)
+  const res = await sendVerifyRequest(artifact, artifactSource, options)
   enforceOrThrow(res.data, `Failed to connect to Etherscan API at url ${options.apiUrl}`)
 
   if (res.data.result === VerificationStatus.ALREADY_VERIFIED) {
@@ -103,16 +104,16 @@ const verifyContract = async (artifact, options) => {
   return verificationStatus(res.data.result, options)
 }
 
-const sendVerifyRequest = async (artifact, options) => {
+const sendVerifyRequest = async (artifact, artifactSource, options) => {
   const encodedConstructorArgs = await fetchConstructorValues(artifact, options)
-  const mergedSource = await fetchMergedSource(artifact, options)
+  const sourceCode = fs.readFileSync(artifactSource, 'utf8')
 
   const postQueries = {
     apikey: options.apiKey,
     module: 'contract',
     action: 'verifysourcecode',
     contractaddress: artifact.networks[`${options.networkId}`].address,
-    sourceCode: mergedSource,
+    sourceCode: sourceCode,
     contractname: artifact.contractName,
     compilerversion: `v${artifact.compiler.version.replace('.Emscripten.clang', '')}`,
     optimizationUsed: options.optimizationUsed,
@@ -169,17 +170,20 @@ const fetchMergedSource = async (artifact, options) => {
 }
 
 const verificationStatus = async (guid, options) => {
-  // Retry API call every second until status is no longer pending
+  // Exponential back off until status is no longer pending
+  let delayTime = 4000
   while (true) {
-    await delay(1000)
+    await delay(delayTime)
 
     try {
       const verificationResult = await axios.get(
         `${options.apiUrl}?module=contract&action=checkverifystatus&apikey=${options.apiKey}&guid=${guid}`
       )
+      console.log(verificationResult.data.result)
       if (verificationResult.data.result !== VerificationStatus.PENDING) {
         return verificationResult.data.result
       }
+      delayTime += delayTime
     } catch (e) {
       throw new Error(`Failed to connect to Etherscan API at url ${options.apiUrl}`)
     }
