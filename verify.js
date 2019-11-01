@@ -106,7 +106,6 @@ const verifyContract = async (artifact, artifactSource, options) => {
 
 const sendVerifyRequest = async (artifact, artifactSource, options) => {
   const encodedConstructorArgs = await fetchConstructorValues(artifact, options)
-  //const artifactSource = await fetchMergedSource(artifact, options)
   const sourceCode = fs.readFileSync(artifactSource, 'utf8')
 
   const postQueries = {
