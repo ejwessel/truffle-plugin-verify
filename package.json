@@ -1,6 +1,6 @@
 {
   "name": "truffle-verify",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Verify deployed smart contracts on Etherscan from Truffle",
   "repository": "https://github.com/ejwessel/truffle-verify.git",
   "main": "verify.js",
