@@ -1,6 +1,6 @@
 {
   "name": "truffle-verify",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Verify deployed smart contracts on Etherscan from Truffle",
   "repository": "https://github.com/ejwessel/truffle-verify.git",
   "main": "verify.js",
@@ -19,6 +19,7 @@
     "plugin",
     "ethereum",
     "etherscan",
+    "solidity",
     "verify"
   ],
   "author": "Ethan Wessel",
