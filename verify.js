@@ -38,7 +38,7 @@ module.exports = async (config) => {
       if (status === VerificationStatus.FAILED) {
         failedContracts.push(`${contractNameAddressPair}`)
       } else {
-        // Add link to verified contract on Ethers
+        // Add link to verified contract on Etherscan
         const explorerUrl = `${EXPLORER_URLS[options.networkId]}/${artifact.networks[`${options.networkId}`].address}#contracts`
         status += `: ${explorerUrl}`
       }
