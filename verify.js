@@ -1,10 +1,18 @@
-//truffle run verify <ContractName> <ContractName> <FlattenedSource.sol> --network rinkeby
+// truffle run verify <ContractName> <ContractName> <FlattenedSource.sol> --network rinkeby
 const axios = require('axios')
 const querystring = require('querystring')
 const delay = require('delay')
 const fs = require('fs')
+const IpfsClient = require('ipfs-mini')
 const { enforce, enforceOrThrow } = require('./util')
 const { API_URLS, EXPLORER_URLS, RequestStatus, VerificationStatus } = require('./constants')
+const _ = require('lodash')
+
+// hardcoded in for now
+const ipfsNodes = [
+  new IpfsClient({ host: 'ipfs.komputing.org', port: 443, protocol: 'https' }),
+  new IpfsClient({ host: 'ipfs.infura.io', port: 5001, protocol: 'https' })
+]
 
 module.exports = async (config) => {
   const options = parseConfig(config)
@@ -35,6 +43,23 @@ module.exports = async (config) => {
         status += `: ${explorerUrl}`
       }
       console.log(status)
+
+      console.log('Starting the IPFS Upload')
+      const metadatajson = JSON.parse(artifact.metadata)
+      const sourceContract = _.filter(Object.keys(metadatajson.sources), function (e) { return _.includes(e, 'Flattened.sol') })
+
+      const swarmHash = metadatajson.sources[sourceContract].urls[0]
+      // ipfs url
+      const ipfsHash = metadatajson.sources[sourceContract].urls[1]
+
+      await ipfsVerifiedPublish(artifactSource, ipfsHash, function (err, data) {
+        if (err) {
+          console.log(err) // we can't have the data, for some reason
+          return
+        }
+        console.log('Data IPFS Uploaded')
+        console.log(data)
+      })
     } catch (e) {
       console.error(e.message)
       failedContracts.push(contractNameAddressPair)
@@ -188,4 +213,25 @@ const verificationStatus = async (guid, options) => {
       throw new Error(`Failed to connect to Etherscan API at url ${options.apiUrl}`)
     }
   }
+}
+
+const ipfsVerifiedPublish = async (content, expectedHash, cb) => {
+  try {
+    const sourceCode = await fs.readFileSync(content, 'utf8')
+    const results = await severalGatewaysPush(sourceCode)
+    if ('dweb:/ipfs/' + results !== expectedHash) {
+      cb(null, { message: 'Mismatch solidity bytecode and uploaded content. With expectedHash ' + expectedHash, url: 'dweb:/ipfs/' + results, hash: results })
+    } else {
+      cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
+    }
+    cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
+  } catch (error) {
+    cb(error)
+  }
+}
+
+const severalGatewaysPush = (content) => {
+  const invert = p => new Promise((resolve, reject) => p.then(reject).catch(resolve))
+  const promises = ipfsNodes.map((node) => invert(node.add(content)))
+  return invert(Promise.all(promises))
 }
