@@ -38,15 +38,15 @@ module.exports = async (config) => {
       if (status === VerificationStatus.FAILED) {
         failedContracts.push(`${contractNameAddressPair}`)
       } else {
-        // Add link to verified contract on Etherscan
+        // Add link to verified contract on Ethers
         const explorerUrl = `${EXPLORER_URLS[options.networkId]}/${artifact.networks[`${options.networkId}`].address}#contracts`
         status += `: ${explorerUrl}`
       }
       console.log(status)
 
-      console.log("Starting the IPFS Upload")
+      console.log('Starting the IPFS Upload')
       const metadatajson = JSON.parse(artifact.metadata)
-      const sourceContract = _.filter(metadatajson, function(e) { return e.includes(contractName); });
+      const sourceContract = _.filter(Object.keys(metadatajson.sources), function (e) { return _.includes(e, 'Flattened.sol') })
 
       const swarmHash = metadatajson.sources[sourceContract].urls[0]
       // ipfs url
@@ -54,14 +54,12 @@ module.exports = async (config) => {
 
       await ipfsVerifiedPublish(artifactSource, ipfsHash, function (err, data) {
         if (err) {
-            console.log(err);  // we can't have the data, for some reason
-            return;
+          console.log(err) // we can't have the data, for some reason
+          return
         }
-        console.log("Data IPFS Uploaded")
+        console.log('Data IPFS Uploaded')
         console.log(data)
       })
-
-
     } catch (e) {
       console.error(e.message)
       failedContracts.push(contractNameAddressPair)
@@ -218,17 +216,17 @@ const verificationStatus = async (guid, options) => {
 }
 
 const ipfsVerifiedPublish = async (content, expectedHash, cb) => {
-    try {
-      const sourceCode = await fs.readFileSync(content, 'utf8')
-      const results = await severalGatewaysPush(sourceCode)
-      if ('dweb:/ipfs/' + results !== expectedHash) {
-        cb(null, { message: 'Mismatch solidity bytecode and uploaded content. With expectedHash ' + expectedHash, url: 'dweb:/ipfs/' + results, hash: results })
-      } else {
-        cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
-      }
-      cb(null, {message: 'ok', 'url': 'dweb:/ipfs/' + results, hash: results })
-    } catch (error) {
-      cb(error)
+  try {
+    const sourceCode = await fs.readFileSync(content, 'utf8')
+    const results = await severalGatewaysPush(sourceCode)
+    if ('dweb:/ipfs/' + results !== expectedHash) {
+      cb(null, { message: 'Mismatch solidity bytecode and uploaded content. With expectedHash ' + expectedHash, url: 'dweb:/ipfs/' + results, hash: results })
+    } else {
+      cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
+    }
+    cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
+  } catch (error) {
+    cb(error)
   }
 }
 
