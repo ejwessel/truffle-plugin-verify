@@ -46,7 +46,7 @@ module.exports = async (config) => {
 
       console.log('Starting the IPFS Upload')
       const metadatajson = JSON.parse(artifact.metadata)
-      const sourceContract = _.filter(Object.keys(metadatajson.sources), function (e) { return _.includes(e, 'Flattened.sol') })
+      const sourceContract = _.filter(Object.keys(metadatajson.sources), function (e) { return _.includes(e, contractName) })
 
       const swarmHash = metadatajson.sources[sourceContract].urls[0]
       // ipfs url
