@@ -204,10 +204,10 @@ const verificationStatus = async (guid, options) => {
       const verificationResult = await axios.get(
         `${options.apiUrl}?module=contract&action=checkverifystatus&apikey=${options.apiKey}&guid=${guid}`
       )
-      console.log(verificationResult.data.result)
       if (verificationResult.data.result !== VerificationStatus.PENDING) {
         return verificationResult.data.result
       }
+      console.log(verificationResult.data.result)
       delayTime += delayTime
     } catch (e) {
       throw new Error(`Failed to connect to Etherscan API at url ${options.apiUrl}`)
@@ -224,7 +224,6 @@ const ipfsVerifiedPublish = async (content, expectedHash, cb) => {
     } else {
       cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
     }
-    cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
   } catch (error) {
     cb(error)
   }
