@@ -224,7 +224,6 @@ const ipfsVerifiedPublish = async (content, expectedHash, cb) => {
     } else {
       cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
     }
-    cb(null, { message: 'ok', url: 'dweb:/ipfs/' + results, hash: results })
   } catch (error) {
     cb(error)
   }
